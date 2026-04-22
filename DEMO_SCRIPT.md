@@ -82,6 +82,36 @@
 
 ---
 
+## 3.5 · The automation engine — 90 seconds *(the new wow)*
+
+> *"But here's where BrokerOS replaces your whole stack. Click Automations."*
+
+**Open `/dashboard/automations`.**
+
+> *"Four workflows are running right now. This isn't a roadmap slide — it's live in production. Let me open Hot Lead Alert."*
+
+**Click into `Hot Lead Alert`.**
+
+> *"Drag and drop. This is a trigger — Lead Scored ≥ 85 — and it fans out to two actions: a Slack ping to your team channel and an SMS to your cell. No code. No Zapier. No HighLevel. Eighteen node types: Send Email, SMS, make a voice call via Twilio + ElevenLabs, write a personalized follow-up with Llama-3.3, update the lead, branch on a condition, wait days or minutes, call any HTTP endpoint, post to Slack."*
+
+**Open Run History (top-right).**
+
+> *"Every run is logged. Click one."*
+
+**Click most recent run.**
+
+> *"Step-by-step: what ran, when, input, output, duration. If it failed, the error is right here. If it's waiting — like the 60-day drip parks for 2 days between emails — you see exactly when it'll resume."*
+
+**Back to Automations list, click `60-day Drip Sequence`.**
+
+> *"This one is eight nodes deep. Welcome email, wait 2 days, follow-up, wait 5 days, follow-up, wait 7 days, then a condition: if the lead never got contacted, SMS nudge. **You** didn't write this. **I** built it in the visual canvas in 90 seconds."*
+
+**Pitch line:**
+
+> *"This one feature alone — the automation engine — replaces Zapier (\$30/mo), HighLevel (\$297/mo), Twilio front-end (\$50/mo), and Mailchimp (\$60/mo). That's \$437/mo saved while staying in one UI. BrokerOS is \$1,500/mo — and automations are already profitable."*
+
+---
+
 ## 4 · Leads index — 45 seconds
 
 **Click "Leads" in sidebar.**
