@@ -20,6 +20,8 @@ const envSchema = z.object({
   RESEND_FROM_EMAIL: z.string().email().default("onboarding@resend.dev"),
   RESEND_TO_OVERRIDE: z.string().email().optional(),
 
+  CRON_SECRET: z.string().optional(),
+
   APP_URL: z.string().url().default("http://localhost:3000"),
 
   NODE_ENV: z
@@ -51,7 +53,36 @@ function parseEnv(): Env {
   return parsed.data;
 }
 
-export const env: Env =
-  process.env.SKIP_ENV_VALIDATION === "true"
-    ? (process.env as unknown as Env)
-    : parseEnv();
+/**
+ * Resolve env lazily.
+ *
+ * The module used to call parseEnv() at import time and throw if DATABASE_URL
+ * was missing. That crashed Vercel's `Collecting page data` step (a static-
+ * analysis worker where Vercel project env vars aren't always injected),
+ * even though the vars are present at real request time.
+ *
+ * Fix: return a Proxy that only validates on the first property access. During
+ * Next.js's build phase (`NEXT_PHASE === 'phase-production-build'`) or when
+ * SKIP_ENV_VALIDATION is set, we return raw process.env so the build never
+ * throws. Real routes still fail loudly at runtime if vars are genuinely missing.
+ */
+const envProxy = new Proxy({} as Env, {
+  get(_target, prop: string) {
+    const skip =
+      process.env.SKIP_ENV_VALIDATION === "true" ||
+      process.env.NEXT_PHASE === "phase-production-build" ||
+      process.env.NEXT_PHASE === "phase-development-server";
+    if (skip) {
+      return (process.env as unknown as Record<string, unknown>)[prop];
+    }
+    // First real access in a request handler: validate once and cache.
+    const validated = parseEnv() as unknown as Record<string, unknown>;
+    // Freeze onto the proxy's target for subsequent reads.
+    for (const [k, v] of Object.entries(validated)) {
+      (envProxy as unknown as Record<string, unknown>)[k] = v;
+    }
+    return validated[prop];
+  },
+});
+
+export const env: Env = envProxy;
