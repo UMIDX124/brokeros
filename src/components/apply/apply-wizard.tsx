@@ -61,6 +61,8 @@ export function ApplyWizard() {
       email: "",
       phone: "",
       bestTimeToCall: "",
+      website: "", // honeypot — must stay empty for humans
+      turnstileToken: "",
     },
   });
 
@@ -102,8 +104,18 @@ export function ApplyWizard() {
         });
 
         if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as { error?: string };
-          toast.error(body.error ?? "Something went wrong. Try again.");
+          const body = (await res.json().catch(() => ({}))) as {
+            error?: string;
+            retryAfter?: number;
+          };
+          if (res.status === 429) {
+            const wait = body.retryAfter ?? 60;
+            toast.error(
+              body.error ?? `Too many submissions. Please try again in ${wait} seconds.`,
+            );
+          } else {
+            toast.error(body.error ?? "Something went wrong. Try again.");
+          }
           return;
         }
 

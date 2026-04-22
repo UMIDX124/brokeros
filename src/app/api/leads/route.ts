@@ -5,6 +5,8 @@ import { applySchema, applyToLead } from "@/lib/leads/schema";
 import { scoreLead, type ScoreInput } from "@/lib/ai/score-lead";
 import { sendWelcomeEmail } from "@/lib/email/send-welcome";
 import { runWorkflowsForTrigger } from "@/lib/workflow/engine";
+import { clientIdentifier, consumeApplyRate } from "@/lib/security/ratelimit";
+import { verifyTurnstile } from "@/lib/security/turnstile";
 
 export const runtime = "nodejs";
 
@@ -31,11 +33,63 @@ function inferProduct(useOfFunds: string): LoanProduct {
 }
 
 export async function POST(request: Request) {
+  // 1) Rate limit by IP — 5 req/min sliding window. Disabled when Upstash
+  //    isn't configured so /apply keeps working during pre-wiring demos.
+  const identity = clientIdentifier(request);
+  const limit = await consumeApplyRate(identity);
+  if (!limit.success) {
+    const retryAfterSec = Math.max(1, Math.ceil((limit.reset - Date.now()) / 1000));
+    return NextResponse.json(
+      {
+        error: "Too many requests. Please wait a minute and try again.",
+        retryAfter: retryAfterSec,
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfterSec),
+          "X-RateLimit-Limit": String(limit.limit),
+          "X-RateLimit-Remaining": String(limit.remaining),
+          "X-RateLimit-Reset": String(limit.reset),
+        },
+      },
+    );
+  }
+
   const json = await request.json().catch(() => null);
   const parsed = applySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid input", issues: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  // 2) Honeypot — real borrowers never see or touch the 'website' field.
+  //    Any non-empty value means a bot. Respond 200 so the bot thinks it
+  //    succeeded; silently drop with no DB write, no AI call, no email.
+  const honeypotValue = parsed.data.website?.trim();
+  if (honeypotValue) {
+    console.warn("[/api/leads] honeypot hit — silently dropping", {
+      identity,
+      honeypotLen: honeypotValue.length,
+      email: parsed.data.email,
+    });
+    return NextResponse.json(
+      { leadId: "honeypot", message: "Application received." },
+      { status: 200 },
+    );
+  }
+
+  // 3) Cloudflare Turnstile — server-side token verification. Bypasses
+  //    cleanly when TURNSTILE_SECRET_KEY isn't set (logged + continues).
+  const turnstile = await verifyTurnstile(parsed.data.turnstileToken, identity);
+  if (!turnstile.success && !turnstile.bypassed) {
+    return NextResponse.json(
+      {
+        error: "Captcha verification failed. Please refresh and try again.",
+        codes: turnstile.errorCodes,
+      },
       { status: 400 },
     );
   }

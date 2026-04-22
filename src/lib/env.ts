@@ -22,6 +22,12 @@ const envSchema = z.object({
 
   CRON_SECRET: z.string().optional(),
 
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
+  TURNSTILE_SECRET_KEY: z.string().optional(),
+
   APP_URL: z.string().url().default("http://localhost:3000"),
 
   NODE_ENV: z

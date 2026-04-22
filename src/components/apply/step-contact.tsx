@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ export function StepContact() {
   } = useFormContext<ApplyInput>();
 
   const time = watch("bestTimeToCall");
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   return (
     <div className="space-y-5">
@@ -63,6 +65,44 @@ export function StepContact() {
         </Select>
         <ErrorText message={errors.bestTimeToCall?.message} />
       </Field>
+
+      {/* Honeypot — hidden from humans, visible to bots. Any value is treated
+          as a bot and silently dropped server-side. aria-hidden + tabIndex=-1 +
+          the off-screen style keep screen readers + real users away. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: "-10000px",
+          top: "auto",
+          width: 1,
+          height: 1,
+          overflow: "hidden",
+        }}
+      >
+        <label htmlFor="website">Website (leave this empty)</label>
+        <input
+          id="website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          {...register("website")}
+        />
+      </div>
+
+      {turnstileSiteKey ? (
+        <div className="pt-2">
+          <Turnstile
+            siteKey={turnstileSiteKey}
+            onSuccess={(token) =>
+              setValue("turnstileToken", token, { shouldValidate: true })
+            }
+            onError={() => setValue("turnstileToken", "", { shouldValidate: false })}
+            onExpire={() => setValue("turnstileToken", "", { shouldValidate: false })}
+            options={{ theme: "light", size: "flexible" }}
+          />
+        </div>
+      ) : null}
 
       <div className="rounded-xl bg-muted/40 border border-border p-4 text-xs text-muted-foreground leading-relaxed">
         We&rsquo;ll use this to connect you with a licensed broker within 1 business day. Your info is
