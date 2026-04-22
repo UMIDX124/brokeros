@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { LeadsAreaChart } from "@/components/dashboard/leads-area-chart";
 import { StatusBadge, ScoreChip } from "@/components/dashboard/status-badge";
+import { AutomationActivity } from "@/components/dashboard/automation-activity";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
@@ -103,7 +104,7 @@ export function LiveDashboard() {
 
   useEffect(() => {
     void refresh();
-    const t = setInterval(refresh, 5_000);
+    const t = setInterval(refresh, 3_000);
     return () => clearInterval(t);
   }, []);
 
@@ -176,6 +177,9 @@ export function LiveDashboard() {
         </div>
         {kpi ? <LeadsAreaChart data={kpi.series} /> : <Skeleton className="h-72 w-full" />}
       </div>
+
+      {/* Automation activity */}
+      <AutomationActivity />
 
       {/* Recent */}
       <div className="rounded-2xl border border-border bg-surface overflow-hidden">

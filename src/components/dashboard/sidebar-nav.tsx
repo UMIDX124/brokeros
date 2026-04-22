@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -30,6 +31,32 @@ const NAV: readonly NavItem[] = [
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const [workflowCount, setWorkflowCount] = useState<{ total: number; enabled: number } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/workflows", { cache: "no-store" });
+        if (!res.ok) return;
+        const body = (await res.json()) as { workflows: { enabled: boolean }[] };
+        if (!cancelled) {
+          setWorkflowCount({
+            total: body.workflows.length,
+            enabled: body.workflows.filter((w) => w.enabled).length,
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    void load();
+    const t = setInterval(load, 15_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
 
   return (
     <nav className="flex h-full flex-col">
@@ -65,7 +92,21 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                 )}
               >
                 <Icon className="h-4 w-4" />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.href === "/dashboard/automations" && workflowCount && workflowCount.total > 0 && (
+                  <span
+                    className={cn(
+                      "font-stat text-[10px] rounded-full px-1.5 py-0.5",
+                      active
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : workflowCount.enabled > 0
+                          ? "bg-success/15 text-success"
+                          : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {workflowCount.enabled}/{workflowCount.total}
+                  </span>
+                )}
               </Link>
             </li>
           );
