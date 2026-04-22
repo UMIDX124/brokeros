@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { applySchema, applyToLead } from "@/lib/leads/schema";
 import { scoreLead, type ScoreInput } from "@/lib/ai/score-lead";
 import { sendWelcomeEmail } from "@/lib/email/send-welcome";
+import { runWorkflowsForTrigger } from "@/lib/workflow/engine";
 
 export const runtime = "nodejs";
 
@@ -146,6 +147,28 @@ export async function POST(request: Request) {
     });
   }
 
+  // Fire workflows matching LEAD_CREATED + LEAD_SCORED (non-blocking for
+  // response latency but awaited so the demo shows the chain in activity feed).
+  const workflowRuns = await runWorkflowsForTrigger("LEAD_CREATED", {
+    leadId: updated.id,
+    score: scored.score,
+    tier: scored.tier,
+    status: updated.status,
+  }).catch((e) => {
+    console.warn("[workflow] LEAD_CREATED dispatch error:", e);
+    return [];
+  });
+
+  const scoredRuns = await runWorkflowsForTrigger("LEAD_SCORED", {
+    leadId: updated.id,
+    score: scored.score,
+    tier: scored.tier,
+    status: updated.status,
+  }).catch((e) => {
+    console.warn("[workflow] LEAD_SCORED dispatch error:", e);
+    return [];
+  });
+
   return NextResponse.json(
     {
       leadId: updated.id,
@@ -162,6 +185,10 @@ export async function POST(request: Request) {
             to: emailResult.toUsed,
           }
         : { triggered: false, reason: `score below threshold (${HIGH_SCORE_THRESHOLD})` },
+      workflows: {
+        triggered: workflowRuns.length + scoredRuns.length,
+        runs: [...workflowRuns, ...scoredRuns].map((r) => ({ runId: r.runId, status: r.status })),
+      },
       message: "Application received.",
     },
     { status: 201 },
