@@ -15,7 +15,8 @@ export type LoanProduct =
   | "MCA"
   | "EQUIPMENT"
   | "WORKING_CAPITAL"
-  | "LINE_OF_CREDIT";
+  | "LINE_OF_CREDIT"
+  | "OTHER";
 
 export type DemoLead = {
   id: string;
@@ -815,7 +816,14 @@ export function getInteractions(leadId: string): DemoInteraction[] {
 export type DemoDocument = {
   id: string;
   leadId: string;
-  type: "BANK_STATEMENT" | "TAX_RETURN" | "DRIVERS_LICENSE" | "VOIDED_CHECK" | "PROFIT_LOSS" | "OTHER";
+  type:
+    | "BANK_STATEMENT"
+    | "TAX_RETURN"
+    | "DRIVERS_LICENSE"
+    | "VOIDED_CHECK"
+    | "PROFIT_LOSS"
+    | "BALANCE_SHEET"
+    | "OTHER";
   filename: string;
   sizeBytes: number;
   uploadedAt: string;
@@ -882,6 +890,7 @@ export const PRODUCT_LABEL: Record<LoanProduct, string> = {
   EQUIPMENT: "Equipment",
   WORKING_CAPITAL: "Working capital",
   LINE_OF_CREDIT: "Line of credit",
+  OTHER: "Other",
 };
 
 export function formatMoney(n: number) {

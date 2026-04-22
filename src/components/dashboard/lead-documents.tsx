@@ -9,6 +9,7 @@ const TYPE_LABEL: Record<DemoDocument["type"], string> = {
   DRIVERS_LICENSE: "Driver's license",
   VOIDED_CHECK: "Voided check",
   PROFIT_LOSS: "P&L",
+  BALANCE_SHEET: "Balance sheet",
   OTHER: "Other",
 };
 

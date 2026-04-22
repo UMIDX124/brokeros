@@ -14,6 +14,7 @@ import {
   Clock,
 } from "lucide-react";
 
+import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -21,39 +22,64 @@ import { StatusBadge, ScoreChip } from "@/components/dashboard/status-badge";
 import { LeadInteractions } from "@/components/dashboard/lead-interactions";
 import { LeadDocuments } from "@/components/dashboard/lead-documents";
 import { LeadTimeline } from "@/components/dashboard/lead-timeline";
-import {
-  getLeadById,
-  getInteractions,
-  getDocuments,
-  PRODUCT_LABEL,
-  formatMoney,
-} from "@/lib/demo/data";
+
+import { PRODUCT_LABEL, formatMoney, type DemoInteraction, type DemoDocument } from "@/lib/demo/data";
+
+const CREDIT_LABEL: Record<string, string> = {
+  UNDER_600: "Under 600",
+  SCORE_600_649: "600–649",
+  SCORE_650_699: "650–699",
+  SCORE_700_749: "700–749",
+  SCORE_750_PLUS: "750+",
+  UNKNOWN: "Not provided",
+};
 
 export async function generateMetadata(
   props: { params: Promise<{ id: string }> },
 ): Promise<Metadata> {
   const { id } = await props.params;
-  const lead = getLeadById(id);
-  return { title: lead ? `${lead.businessName}` : "Lead not found" };
+  const lead = await prisma.lead.findUnique({ where: { id }, select: { businessName: true } });
+  return { title: lead ? lead.businessName : "Lead not found" };
 }
 
 export default async function LeadDetailPage(
   props: { params: Promise<{ id: string }> },
 ) {
   const { id } = await props.params;
-  const lead = getLeadById(id);
+  const lead = await prisma.lead.findUnique({
+    where: { id },
+    include: {
+      interactions: { orderBy: { createdAt: "asc" } },
+      documents: { orderBy: { uploadedAt: "desc" } },
+    },
+  });
   if (!lead) notFound();
 
-  const interactions = getInteractions(id);
-  const documents = getDocuments(id);
-  const creditLabel: Record<typeof lead.creditScoreRange, string> = {
-    UNDER_600: "Under 600",
-    SCORE_600_649: "600–649",
-    SCORE_650_699: "650–699",
-    SCORE_700_749: "700–749",
-    SCORE_750_PLUS: "750+",
-    UNKNOWN: "Not provided",
+  const meta = (lead.metadata ?? {}) as {
+    state?: string;
+    fundingTimeline?: string;
+    bestTimeToCall?: string;
   };
+
+  const interactions: DemoInteraction[] = lead.interactions.map((i) => ({
+    id: i.id,
+    leadId: i.leadId,
+    type: i.type,
+    direction: i.direction,
+    subject: i.subject ?? undefined,
+    content: i.content,
+    actor: "BrokerOS",
+    createdAt: i.createdAt.toISOString(),
+  }));
+
+  const documents: DemoDocument[] = lead.documents.map((d) => ({
+    id: d.id,
+    leadId: d.leadId,
+    type: d.type,
+    filename: d.filename,
+    sizeBytes: d.sizeBytes ?? 0,
+    uploadedAt: d.uploadedAt.toISOString(),
+  }));
 
   return (
     <div className="mx-auto max-w-6xl px-4 md:px-8 py-8 md:py-10 space-y-6">
@@ -64,16 +90,19 @@ export default async function LeadDetailPage(
         <ArrowLeft className="h-4 w-4 mr-1" /> All leads
       </Link>
 
-      {/* Header card */}
       <div className="rounded-2xl border border-border bg-surface p-6 md:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2 min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-xs font-stat text-muted-foreground">
-              <span>{lead.id}</span>
+              <span>{lead.id.slice(0, 8).toUpperCase()}</span>
               <span>•</span>
-              <span>{PRODUCT_LABEL[lead.product]}</span>
-              <span>•</span>
-              <span>{lead.source}</span>
+              <span>{PRODUCT_LABEL[lead.product] ?? lead.product}</span>
+              {lead.source && (
+                <>
+                  <span>•</span>
+                  <span>{lead.source}</span>
+                </>
+              )}
             </div>
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
               {lead.businessName}
@@ -82,12 +111,14 @@ export default async function LeadDetailPage(
               <span className="inline-flex items-center gap-1.5">
                 <Building2 className="h-4 w-4" /> {lead.industry}
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-4 w-4" /> {lead.city}, {lead.state}
-              </span>
+              {meta.state && (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4" /> {meta.state}
+                </span>
+              )}
               <span className="inline-flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" />{" "}
-                Submitted {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true })}
+                Submitted {formatDistanceToNow(lead.createdAt, { addSuffix: true })}
               </span>
             </div>
           </div>
@@ -95,7 +126,13 @@ export default async function LeadDetailPage(
           <div className="flex items-center gap-3 shrink-0">
             <div className="text-right">
               <div className="text-xs text-muted-foreground font-stat">AI score</div>
-              <div className="mt-1"><ScoreChip score={lead.score} /></div>
+              <div className="mt-1">
+                {lead.score !== null ? (
+                  <ScoreChip score={lead.score} />
+                ) : (
+                  <span className="text-xs text-muted-foreground">Pending</span>
+                )}
+              </div>
             </div>
             <Separator orientation="vertical" className="h-10" />
             <div className="text-right">
@@ -106,16 +143,8 @@ export default async function LeadDetailPage(
         </div>
 
         <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatBlock
-            icon={DollarSign}
-            label="Loan amount"
-            value={formatMoney(lead.loanAmount)}
-          />
-          <StatBlock
-            icon={TrendingUp}
-            label="Monthly revenue"
-            value={formatMoney(lead.monthlyRevenue)}
-          />
+          <StatBlock icon={DollarSign} label="Loan amount" value={formatMoney(lead.loanAmount)} />
+          <StatBlock icon={TrendingUp} label="Monthly revenue" value={formatMoney(lead.monthlyRevenue)} />
           <StatBlock
             icon={Clock}
             label="Time in business"
@@ -124,12 +153,11 @@ export default async function LeadDetailPage(
           <StatBlock
             icon={TrendingUp}
             label="Credit range"
-            value={creditLabel[lead.creditScoreRange]}
+            value={CREDIT_LABEL[lead.creditScoreRange] ?? "Not provided"}
           />
         </div>
       </div>
 
-      {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -144,11 +172,15 @@ export default async function LeadDetailPage(
               <div>
                 <h2 className="text-lg font-semibold">AI score rationale</h2>
                 <p className="mt-1 text-xs text-muted-foreground font-stat">
-                  Generated by Groq llama-3.3-70b at submission.
+                  {lead.scoredAt
+                    ? `Scored ${format(lead.scoredAt, "MMM d, yyyy 'at' p")}.`
+                    : "Not yet scored."}
                 </p>
                 <div className="mt-4 rounded-xl border border-border bg-background p-4 flex gap-4 items-start">
-                  <ScoreChip score={lead.score} />
-                  <p className="text-sm leading-relaxed flex-1">{lead.scoreReason}</p>
+                  {lead.score !== null ? <ScoreChip score={lead.score} /> : null}
+                  <p className="text-sm leading-relaxed flex-1">
+                    {lead.scoreReason ?? "Scoring pending."}
+                  </p>
                 </div>
               </div>
 
@@ -157,15 +189,21 @@ export default async function LeadDetailPage(
               <div>
                 <h2 className="text-lg font-semibold">Loan request</h2>
                 <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <InfoRow label="Product" value={PRODUCT_LABEL[lead.product]} />
+                  <InfoRow label="Product" value={PRODUCT_LABEL[lead.product] ?? lead.product} />
                   <InfoRow label="Amount requested" value={formatMoney(lead.loanAmount)} />
                   <InfoRow label="Monthly revenue" value={formatMoney(lead.monthlyRevenue)} />
                   <InfoRow
                     label="Time in business"
                     value={`${Math.floor(lead.timeInBusinessMonths / 12)} yrs ${lead.timeInBusinessMonths % 12} mo`}
                   />
-                  <InfoRow label="Credit range" value={creditLabel[lead.creditScoreRange]} />
+                  <InfoRow label="Credit range" value={CREDIT_LABEL[lead.creditScoreRange] ?? "—"} />
                   <InfoRow label="Industry" value={lead.industry} />
+                  {meta.fundingTimeline && (
+                    <InfoRow label="Funding timeline" value={meta.fundingTimeline.replace(/_/g, " ").toLowerCase()} />
+                  )}
+                  {meta.bestTimeToCall && (
+                    <InfoRow label="Best time to call" value={meta.bestTimeToCall} />
+                  )}
                 </dl>
                 <div className="mt-4 rounded-xl border border-border bg-background p-4">
                   <div className="text-xs text-muted-foreground font-stat mb-1">Purpose of funds</div>
@@ -196,12 +234,12 @@ export default async function LeadDetailPage(
                     {lead.phone}
                   </a>
                 </li>
-                <li className="flex items-start gap-3">
-                  <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                  <span>
-                    {lead.city}, {lead.state}
-                  </span>
-                </li>
+                {meta.state && (
+                  <li className="flex items-start gap-3">
+                    <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                    <span>{meta.state}</span>
+                  </li>
+                )}
               </ul>
 
               <Separator />
@@ -216,23 +254,15 @@ export default async function LeadDetailPage(
               </div>
 
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Last activity {format(new Date(lead.updatedAt), "MMM d, yyyy 'at' p")}
+                Last activity {format(lead.updatedAt, "MMM d, yyyy 'at' p")}
               </p>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="documents">
-          <LeadDocuments documents={documents} />
-        </TabsContent>
-
-        <TabsContent value="interactions">
-          <LeadInteractions interactions={interactions} />
-        </TabsContent>
-
-        <TabsContent value="timeline">
-          <LeadTimeline interactions={interactions} />
-        </TabsContent>
+        <TabsContent value="documents"><LeadDocuments documents={documents} /></TabsContent>
+        <TabsContent value="interactions"><LeadInteractions interactions={interactions} /></TabsContent>
+        <TabsContent value="timeline"><LeadTimeline interactions={interactions} /></TabsContent>
       </Tabs>
     </div>
   );
