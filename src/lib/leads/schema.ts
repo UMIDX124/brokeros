@@ -107,6 +107,12 @@ export const stepThreeSchema = z.object({
     .min(7, "Enter a phone number")
     .regex(/[\d() +\-.]+/, "Digits only please"),
   bestTimeToCall: z.string().min(1, "Pick a time"),
+  // Honeypot — real users never see or touch this. Bots auto-fill every input.
+  // Zod allows empty; server rejects any non-empty value silently.
+  website: z.string().optional(),
+  // Cloudflare Turnstile token captured client-side; server verifies.
+  // Optional because keys may not be configured (bypass path preserves demo safety).
+  turnstileToken: z.string().optional(),
 });
 
 export const applySchema = stepOneSchema.merge(stepTwoSchema).merge(stepThreeSchema);
