@@ -34,6 +34,7 @@ model User {
   accounts Account[]
   sessions Session[]
   interactions Interaction[]
+  workflows    Workflow[]
 
   @@index([email])
 }
@@ -135,6 +136,7 @@ model Lead {
   application   Application?
   documents     Document[]
   interactions  Interaction[]
+  workflowRuns  WorkflowRun[]
 
   @@index([status])
   @@index([score])
@@ -268,4 +270,95 @@ model ScoringConfig {
   minMonthlyRevenue     Int      @default(10000)
   minTimeInBusinessMos  Int      @default(6)
   updatedAt             DateTime @updatedAt
+}
+
+// ─── Workflow automation engine ────────────────────────────────────
+
+enum RunStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+  WAITING
+}
+
+enum StepStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+model Workflow {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  enabled     Boolean  @default(true)
+
+  // trigger: { type: 'LEAD_SCORED' | 'LEAD_CREATED' | ..., config: {...} }
+  trigger     Json
+  // nodes: [{ id, type, position: {x,y}, data: {...config} }, ...]
+  nodes       Json
+  // edges: [{ id, from, to, condition?, label? }, ...]
+  edges       Json
+
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  runs        WorkflowRun[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([enabled])
+}
+
+model WorkflowRun {
+  id          String    @id @default(cuid())
+  workflowId  String
+  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  // trigger payload that kicked this off
+  triggerData Json
+  status      RunStatus @default(RUNNING)
+
+  // optional lead context — most runs are lead-centric
+  leadId      String?
+  lead        Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  steps       WorkflowStep[]
+
+  // when a WAIT node parks the run — cron picks these up
+  resumeAt    DateTime?
+  cursorNode  String?   // node id to resume from
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([workflowId, startedAt])
+  @@index([status])
+  @@index([resumeAt])
+  @@index([leadId])
+}
+
+model WorkflowStep {
+  id          String      @id @default(cuid())
+  runId       String
+  run         WorkflowRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  nodeId      String      // references node.id inside Workflow.nodes
+  nodeType    String      // 'SEND_EMAIL', 'WAIT', ...
+  label       String?
+
+  input       Json
+  output      Json?
+  status      StepStatus  @default(PENDING)
+  error       String?     @db.Text
+
+  startedAt   DateTime    @default(now())
+  completedAt DateTime?
+
+  @@index([runId, startedAt])
+  @@index([status])
 }
