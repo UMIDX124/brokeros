@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BrokerOS
 
-## Getting Started
+> The AI-powered operating system for modern loan brokers.
 
-First, run the development server:
+Capture leads, score them with AI, auto-follow-up, collect documents, and close more deals — all from one beautiful dashboard.
+
+**Target users:** Small business loan brokers & lenders originating SBA loans, MCAs (merchant cash advances), equipment financing, and working capital lines.
+
+---
+
+## Tech stack
+
+| Layer            | Choice                                                  |
+| ---------------- | ------------------------------------------------------- |
+| Framework        | Next.js 16 (App Router, Turbopack, Node runtime)        |
+| Language         | TypeScript (strict + `noUncheckedIndexedAccess`)        |
+| Styling          | Tailwind CSS v4 + shadcn/ui (`new-york`, Hearth theme)  |
+| ORM / DB         | Prisma 6 + Neon PostgreSQL                              |
+| Auth             | NextAuth v5 (credentials + Prisma adapter)              |
+| AI               | Groq SDK — `llama-3.3-70b-versatile`                    |
+| Email            | Resend                                                  |
+| Forms            | React Hook Form + Zod                                   |
+| Charts           | Recharts                                                |
+| Package manager  | pnpm (never npm)                                        |
+| Deployment       | Vercel                                                  |
+
+### Theme — Hearth Mode
+
+Brand colors are locked. No purple, no indigo, no fintech blue.
+
+| Token       | Hex       | Purpose                    |
+| ----------- | --------- | -------------------------- |
+| primary     | `#1A1A2E` | Deep navy-black — trust    |
+| accent      | `#F4A261` | Warm amber — primary CTA   |
+| success     | `#06A77D` | Sage green — money-positive |
+| destructive | `#C44536` | Warm red                   |
+| background  | `#FAF8F5` | Warm off-white             |
+| surface     | `#FFFFFF` | Cards                      |
+
+Fonts: **Inter** for UI, **JetBrains Mono** for numbers / stats (via `.font-stat`).
+
+---
+
+## Getting started
+
+### 1. Install
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure env
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local
+# fill in DATABASE_URL (Neon), NEXTAUTH_SECRET, GROQ_API_KEY, RESEND_API_KEY
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Push the schema
 
-## Learn More
+```bash
+pnpm db:push     # or: pnpm db:migrate to create a migration
+pnpm db:seed     # seed demo data (30 leads + 12 closed deals)
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 4. Dev
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Command           | What                                  |
+| ----------------- | ------------------------------------- |
+| `pnpm dev`        | Next.js dev server                    |
+| `pnpm build`      | Production build                      |
+| `pnpm start`      | Start production server               |
+| `pnpm lint`       | ESLint                                |
+| `pnpm typecheck`  | `tsc --noEmit`                        |
+| `pnpm db:generate`| Generate Prisma client                |
+| `pnpm db:push`    | Push schema to Neon (no migration)    |
+| `pnpm db:migrate` | Create + run a migration              |
+| `pnpm db:studio`  | Prisma Studio                         |
+| `pnpm db:seed`    | Seed demo leads + closed deals        |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Project layout
+
+```
+src/
+  app/             # Next App Router — routes, layouts, api
+  components/      # Reusable React components
+    ui/            # shadcn/ui primitives
+  lib/             # prisma client, env, auth, groq, resend, utils
+  hooks/           # React hooks
+  types/           # Shared TS types
+prisma/
+  schema.prisma    # Models: User, Lead, Application, Document,
+                   #         Interaction, EmailTemplate, ScoringConfig
+  seed.ts          # Demo data seeder
+```
+
+---
+
+## License
+
+Proprietary — © Umer / Digital Point LLC.

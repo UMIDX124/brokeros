@@ -1,26 +1,195 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Hearth Mode — BrokerOS brand tokens ───────────────────────
+   Deep navy-black trust, warm amber CTA, sage success, warm off-white surfaces.
+   No purple, no indigo, no sterile fintech blue.
+────────────────────────────────────────────────────────────────── */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --radius: 0.75rem;
+
+  /* Brand scale */
+  --brand-primary: #1A1A2E;
+  --brand-accent:  #F4A261;
+  --brand-success: #06A77D;
+  --brand-danger:  #C44536;
+
+  /* Surfaces */
+  --background: #FAF8F5;
+  --foreground: #1A1A2E;
+  --surface:    #FFFFFF;
+  --muted-fg:   #6B6B80;
+  --border-c:   #E8E6E1;
+
+  /* shadcn tokens */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+
+  --primary: var(--brand-primary);
+  --primary-foreground: #FAF8F5;
+
+  --secondary: #F1EEE8;
+  --secondary-foreground: var(--brand-primary);
+
+  --muted: #F1EEE8;
+  --muted-foreground: var(--muted-fg);
+
+  --accent: var(--brand-accent);
+  --accent-foreground: var(--brand-primary);
+
+  --destructive: var(--brand-danger);
+  --destructive-foreground: #FAF8F5;
+
+  --success: var(--brand-success);
+  --success-foreground: #FAF8F5;
+
+  --border: var(--border-c);
+  --input:  var(--border-c);
+  --ring:   var(--brand-accent);
+
+  --chart-1: #F4A261;
+  --chart-2: #06A77D;
+  --chart-3: #1A1A2E;
+  --chart-4: #E9C46A;
+  --chart-5: #C44536;
+
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--brand-primary);
+  --sidebar-primary-foreground: #FAF8F5;
+  --sidebar-accent: #F1EEE8;
+  --sidebar-accent-foreground: var(--brand-primary);
+  --sidebar-border: var(--border-c);
+  --sidebar-ring: var(--brand-accent);
+}
+
+.dark {
+  --background: #0F0F1A;
+  --foreground: #FAF8F5;
+  --surface:    #1A1A2E;
+  --muted-fg:   #9B9BAE;
+  --border-c:   #2A2A3E;
+
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+
+  --primary: #F4A261;
+  --primary-foreground: #1A1A2E;
+
+  --secondary: #252538;
+  --secondary-foreground: var(--foreground);
+
+  --muted: #252538;
+  --muted-foreground: var(--muted-fg);
+
+  --accent: #F4A261;
+  --accent-foreground: #1A1A2E;
+
+  --destructive: #E06B5A;
+  --destructive-foreground: #FAF8F5;
+
+  --success: #06A77D;
+  --success-foreground: #FAF8F5;
+
+  --border: var(--border-c);
+  --input:  var(--border-c);
+  --ring:   #F4A261;
+
+  --sidebar: #14141F;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: #F4A261;
+  --sidebar-primary-foreground: #1A1A2E;
+  --sidebar-accent: #252538;
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: #2A2A3E;
+  --sidebar-ring: #F4A261;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * { border-color: var(--border); }
+
+  html,
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Numbers & stats in JetBrains Mono — premium stat feel */
+  .font-stat {
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum";
+    letter-spacing: -0.01em;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
 }
